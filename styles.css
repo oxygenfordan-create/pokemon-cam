@@ -1,0 +1,325 @@
+:root {
+  color-scheme: dark;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  --bg-base: #070712;
+  --panel: rgba(15, 11, 35, 0.72);
+  --panel-strong: rgba(18, 15, 48, 0.92);
+  --gold: #f4e0a5;
+  --accent: #7ee7ff;
+  --muted: rgba(255, 255, 255, 0.72);
+  --ring: rgba(244, 224, 165, 0.24);
+  --shadow: 0 40px 120px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(circle at top, rgba(255, 240, 190, 0.08), transparent 32%),
+    radial-gradient(circle at 20% 20%, rgba(126, 231, 255, 0.16), transparent 25%),
+    linear-gradient(180deg, #090912 0%, #04040b 100%);
+  color: white;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.page-shell {
+  width: min(1120px, 100%);
+}
+
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 32px;
+  background: rgba(6, 8, 22, 0.86);
+  box-shadow: var(--shadow);
+}
+
+.hero-glow {
+  position: absolute;
+  inset: -30% 0 50%;
+  background: radial-gradient(circle, rgba(244, 224, 165, 0.18), transparent 28%);
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  padding: 32px;
+  display: grid;
+  gap: 28px;
+}
+
+.top-banner {
+  display: inline-grid;
+  gap: 10px;
+  padding: 18px 24px;
+  border-radius: 28px;
+  align-self: start;
+  max-width: 480px;
+  background: rgba(11, 8, 28, 0.8);
+  border: 1px solid rgba(244, 224, 165, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.greeting {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.camera-card {
+  position: relative;
+  display: grid;
+  gap: 24px;
+  padding: 32px;
+  border-radius: 32px;
+  background: rgba(10, 10, 24, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(22px);
+}
+
+.camera-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.card-label {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.camera-card h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3.5vw, 3.2rem);
+}
+
+.last-capture {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(244, 224, 165, 0.14);
+}
+
+.last-capture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.92;
+  transform: translateZ(0);
+}
+
+.camera-view-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.camera-frame {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: min(680px, 100%);
+  aspect-ratio: 1 / 1;
+  border-radius: 38px;
+  border: 1px solid rgba(244, 224, 165, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.camera-window {
+  position: relative;
+  z-index: 1;
+  width: min(620px, 100%);
+  aspect-ratio: 1 / 1;
+  border-radius: 32px;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.06), transparent 32%),
+    rgba(8, 8, 24, 0.8);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 120px rgba(118, 225, 255, 0.06);
+  display: grid;
+  align-items: center;
+  justify-items: center;
+}
+
+#cameraVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.08);
+}
+
+.runic-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  justify-items: center;
+  pointer-events: none;
+  opacity: 0.18;
+  color: var(--gold);
+  font-size: 4rem;
+}
+
+.runic-overlay span {
+  transform: rotate(-12deg);
+}
+
+.controls-panel {
+  display: grid;
+  gap: 24px;
+  justify-items: center;
+}
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+}
+
+.filter-chip {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 15, 48, 0.72);
+  color: var(--muted);
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-size: 0.93rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.filter-chip.active,
+.filter-chip:hover {
+  background: rgba(244, 224, 165, 0.14);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.capture-button {
+  width: 104px;
+  height: 104px;
+  border: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(244, 224, 165, 0.42), rgba(244, 224, 165, 0.08) 35%, transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 0 0 6px rgba(244, 224, 165, 0.1), 0 30px 60px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.capture-button span {
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  background: rgba(11, 8, 28, 0.92);
+  border: 2px solid rgba(244, 224, 165, 0.55);
+}
+
+.capture-button:hover {
+  transform: translateY(-3px) scale(1.02);
+}
+
+.capture-button:focus-visible {
+  outline: 3px solid rgba(126, 231, 255, 0.35);
+}
+
+.status-panel {
+  padding: 24px;
+  border-radius: 24px;
+  background: rgba(10, 10, 24, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.status-title {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+  color: white;
+}
+
+.status-copy {
+  margin: 0;
+  color: var(--muted);
+}
+
+.filter-arceus {
+  filter: saturate(1.15) contrast(1.12) brightness(1.05) sepia(0.12) hue-rotate(-8deg);
+}
+
+.filter-lunala {
+  filter: saturate(1.05) contrast(1.08) hue-rotate(190deg) brightness(1.07) blur(0.3px);
+}
+
+.filter-solgaleo {
+  filter: saturate(1.28) contrast(1.2) brightness(1.12) sepia(0.08) hue-rotate(12deg);
+}
+
+.filter-mew {
+  filter: saturate(1.08) contrast(1.02) brightness(1.12) hue-rotate(265deg) opacity(0.96);
+}
+
+@media (max-width: 780px) {
+  .hero-content {
+    padding: 24px;
+  }
+
+  .camera-card {
+    padding: 24px;
+  }
+
+  .top-banner {
+    max-width: 100%;
+  }
+
+  .camera-view-wrap {
+    padding: 16px;
+  }
+
+  .capture-button {
+    width: 88px;
+    height: 88px;
+  }
+}
+
+@media (max-width: 520px) {
+  body {
+    padding: 18px 12px;
+  }
+
+  .camera-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .last-capture {
+    width: 60px;
+    height: 60px;
+  }
+}

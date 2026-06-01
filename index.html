@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pokémon Cam</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="hero-panel">
+        <div class="hero-glow"></div>
+        <div class="hero-content">
+          <div class="top-banner">
+            <span class="greeting">Hi. Arra!!</span>
+            <p class="subtitle">Welcome to the otherworldly Pokémon camera portal.</p>
+          </div>
+
+          <section class="camera-card">
+            <div class="camera-card-header">
+              <div>
+                <p class="card-label">Celestial Viewfinder</p>
+                <h1>Arceus Frame</h1>
+              </div>
+              <div class="last-capture" aria-label="Last captured photo preview">
+                <img id="photoPreview" alt="Last capture preview" />
+              </div>
+            </div>
+
+            <div class="camera-view-wrap">
+              <div class="camera-frame"></div>
+              <div class="camera-window filter-arceus" id="cameraWindow">
+                <video id="cameraVideo" autoplay playsinline muted></video>
+              </div>
+              <div class="runic-overlay">
+                <span>∗</span><span>⊗</span><span>◉</span>
+              </div>
+            </div>
+
+            <div class="controls-panel">
+              <div class="filters-row" id="filterList"></div>
+              <button id="captureButton" class="capture-button" type="button">
+                <span></span>
+              </button>
+            </div>
+          </section>
+
+          <div class="status-panel" id="statusPanel" hidden>
+            <p class="status-title">Camera access is unavailable</p>
+            <p class="status-copy">Allow camera permission or use a secure HTTPS server to activate the portal.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
