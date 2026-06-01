@@ -31,18 +31,15 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .pokemon-overlay-img {
+        /* Interactive Asset Elements */
+        .pokemon-overlay-img, .item-overlay-img {
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            filter: drop-shadow(0 0 12px var(--poke-glow, rgba(244,224,165,0.4))) brightness(1.1);
         }
         video {
             transition: filter 0.6s ease-in-out;
         }
-        
-        /* Premium Golden Text Glow for the Banner Name */
         .brand-banner {
             text-shadow: 0 0 10px rgba(244, 224, 165, 0.4);
-            font-family: system-ui, -apple-system, sans-serif;
         }
     </style>
 </head>
@@ -77,8 +74,12 @@
                 </span>
             </div>
 
+            <div class="absolute bottom-4 left-4 w-1/4 h-1/4 pointer-events-none z-10 flex items-end justify-start">
+                <img id="item-overlay" src="" class="max-w-full max-h-full object-contain opacity-0 item-overlay-img" alt="Cute Item">
+            </div>
+
             <div class="absolute bottom-4 right-4 w-1/3 h-1/3 pointer-events-none z-10 flex items-end justify-end">
-                <img id="active-overlay" src="" class="max-w-full max-h-full object-contain opacity-0 pokemon-overlay-img" alt="Active Frame Overlay">
+                <img id="active-overlay" src="" class="max-w-full max-h-full object-contain opacity-0 pokemon-overlay-img" alt="Active Character Overlay">
             </div>
 
             <div id="error-state" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center hidden bg-slate-950/90">
@@ -88,10 +89,14 @@
         </div>
     </main>
 
-    <footer class="w-full max-w-md flex flex-col gap-4 mb-2 z-10">
-        <div id="pokemon-selector" class="w-full flex gap-3 overflow-x-auto no-scrollbar py-2 px-1"></div>
+    <footer class="w-full max-w-md flex flex-col gap-2 mb-2 z-10">
+        <span class="text-[10px] tracking-widest text-[#f4e0a5]/60 uppercase pl-1">Decorations</span>
+        <div id="item-selector" class="w-full flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1"></div>
 
-        <div class="w-full glass-panel rounded-3xl p-4 flex items-center justify-between">
+        <span class="text-[10px] tracking-widest text-[#f4e0a5]/60 uppercase pl-1">Characters</span>
+        <div id="pokemon-selector" class="w-full flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1"></div>
+
+        <div class="w-full glass-panel rounded-3xl p-4 flex items-center justify-between mt-2">
             <button id="clear-frame-btn" class="w-12 h-12 rounded-full flex items-center justify-center text-rose-300/60 hover:text-rose-400 transition">
                 <i data-lucide="ban" class="w-5 h-5"></i>
             </button>
@@ -108,17 +113,18 @@
         </div>
     </footer>
 
-    <div id="preview-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 hidden">
+    <div id="preview-modal" class="fixed inset-0 bg-black/85 backdrop-blur-xl z-50 flex flex-col items-center justify-center p-6 hidden">
         <div class="glass-panel p-4 rounded-3xl max-w-sm w-full flex flex-col items-center gap-4">
             <h3 class="text-xs tracking-widest text-[#f4e0a5] uppercase">Photo Captured</h3>
             <div class="w-full aspect-[3/4] rounded-2xl overflow-hidden border border-[#f4e0a5]/20 bg-black">
                 <img id="modal-image" class="w-full h-full object-cover" src="" alt="Captured Image">
             </div>
-            <p class="text-[11px] text-slate-400 text-center px-4">
-                <i data-lucide="smartphone" class="w-4 h-4 inline mr-1 text-[#f4e0a5]"></i> 
-                Tap and hold the photo above to select <strong>"Save to Photos"</strong> or copy it.
-            </p>
-            <button id="close-modal-btn" class="w-full py-2 rounded-xl bg-white/5 border border-white/10 text-xs tracking-wider uppercase hover:bg-white/10 transition">
+            
+            <button id="download-photo-btn" class="w-full py-3 rounded-xl bg-gradient-to-r from-[#f4e0a5]/20 to-[#f4e0a5]/5 border border-[#f4e0a5]/40 text-xs font-medium tracking-widest text-[#f4e0a5] uppercase hover:brightness-110 transition flex items-center justify-center gap-2 shadow-lg">
+                <i data-lucide="download" class="w-4 h-4"></i> Save to Device Gallery
+            </button>
+            
+            <button id="close-modal-btn" class="w-full py-2 rounded-xl bg-white/5 border border-white/10 text-xs tracking-wider uppercase text-slate-400 hover:text-white transition">
                 Return to Camera
             </button>
         </div>
@@ -127,23 +133,37 @@
     <canvas id="render-canvas" class="hidden"></canvas>
 
     <script>
-        // Data Configuration Array: 15 Core Entities (Arceus is 1st, Bulbasaur is 8th)
+        // Core Characters Array Configuration
         const pokemonList = [
-            { id: 'arceus', name: 'Arceus', tint: 'sepia(0.15) hue-rotate(10deg) saturate(1.1)', glow: '#f4e0a5', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/493.svg' },
-            { id: 'pikachu', name: 'Pikachu', tint: 'sepia(0.1) saturate(1.3) hue-rotate(5deg)', glow: '#facc15', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/25.svg' },
-            { id: 'charizard', name: 'Charizard', tint: 'saturate(1.2) hue-rotate(-10deg)', glow: '#f97316', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/6.svg' },
-            { id: 'mewtwo', name: 'Mewtwo', tint: 'hue-rotate(240deg) saturate(0.9) brightness(1.05)', glow: '#c084fc', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/150.svg' },
-            { id: 'gengar', name: 'Gengar', tint: 'hue-rotate(220deg) contrast(1.1)', glow: '#a855f7', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/94.svg' },
-            { id: 'lugia', name: 'Lugia', tint: 'hue-rotate(160deg) saturate(0.85)', glow: '#38bdf8', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/249.svg' },
-            { id: 'rayquaza', name: 'Rayquaza', tint: 'hue-rotate(80deg) saturate(1.1)', glow: '#22c55e', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/384.svg' },
-            { id: 'bulbasaur', name: 'Bulbasaur', tint: 'hue-rotate(90deg) saturate(1.15) brightness(1.02)', glow: '#2dd4bf', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/1.svg' },
-            { id: 'lucario', name: 'Lucario', tint: 'hue-rotate(170deg) contrast(1.05)', glow: '#60a5fa', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/448.svg' },
-            { id: 'gardevoir', name: 'Gardevoir', tint: 'hue-rotate(110deg) saturate(0.9)', glow: '#4ade80', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/282.svg' },
-            { id: 'eevee', name: 'Eevee', tint: 'sepia(0.2) saturate(1.1)', glow: '#fb923c', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/133.svg' },
-            { id: 'mew', name: 'Mew', tint: 'hue-rotate(300deg) saturate(1.2)', glow: '#f472b6', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/151.svg' },
-            { id: 'greninja', name: 'Greninja', tint: 'hue-rotate(190deg) contrast(1.15)', glow: '#1d4ed8', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/658.svg' },
-            { id: 'blastoise', name: 'Blastoise', tint: 'hue-rotate(180deg) saturate(1.1)', glow: '#2563eb', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/9.svg' },
-            { id: 'snorlax', name: 'Snorlax', tint: 'hue-rotate(140deg) saturate(0.7) brightness(0.95)', glow: '#0f766e', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/143.svg' }
+            { id: 'arceus', name: 'Arceus', tint: 'sepia(0.12) saturate(1.15) brightness(1.02)', glow: '#f4e0a5', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/493.svg' },
+            { id: 'pikachu', name: 'Pikachu', tint: 'sepia(0.08) saturate(1.25) brightness(1.02)', glow: '#facc15', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/25.svg' },
+            { id: 'charizard', name: 'Charizard', tint: 'saturate(1.15) hue-rotate(-8deg) brightness(1.02)', glow: '#f97316', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/6.svg' },
+            { id: 'mewtwo', name: 'Mewtwo', tint: 'hue-rotate(240deg) saturate(0.9) brightness(1.03)', glow: '#c084fc', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/150.svg' },
+            { id: 'gengar', name: 'Gengar', tint: 'hue-rotate(220deg) contrast(1.05) brightness(1.02)', glow: '#a855f7', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/94.svg' },
+            { id: 'lugia', name: 'Lugia', tint: 'hue-rotate(160deg) saturate(0.85) brightness(1.02)', glow: '#38bdf8', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/249.svg' },
+            { id: 'rayquaza', name: 'Rayquaza', tint: 'hue-rotate(80deg) saturate(1.1) brightness(1.02)', glow: '#22c55e', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/384.svg' },
+            { id: 'bulbasaur', name: 'Bulbasaur', tint: 'hue-rotate(90deg) saturate(1.1) brightness(1.02)', glow: '#2dd4bf', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/1.svg' },
+            { id: 'lucario', name: 'Lucario', tint: 'hue-rotate(170deg) contrast(1.02)', glow: '#60a5fa', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/448.svg' },
+            { id: 'gardevoir', name: 'Gardevoir', tint: 'hue-rotate(110deg) saturate(0.85)', glow: '#4ade80', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/282.svg' },
+            { id: 'eevee', name: 'Eevee', tint: 'sepia(0.15) saturate(1.1)', glow: '#fb923c', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/133.svg' },
+            { id: 'mew', name: 'Mew', tint: 'hue-rotate(300deg) saturate(1.15)', glow: '#f472b6', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/151.svg' },
+            { id: 'greninja', name: 'Greninja', tint: 'hue-rotate(190deg) contrast(1.1)', glow: '#1d4ed8', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/658.svg' },
+            { id: 'blastoise', name: 'Blastoise', tint: 'hue-rotate(180deg) saturate(1.05)', glow: '#2563eb', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/9.svg' },
+            { id: 'snorlax', name: 'Snorlax', tint: 'hue-rotate(140deg) saturate(0.7) brightness(0.98)', glow: '#0f766e', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/143.svg' }
+        ];
+
+        // NEW: 10 Cute Pokémon Items & Objects
+        const itemList = [
+            { id: 'pokeball', name: 'Poké Ball', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png' },
+            { id: 'greatball', name: 'Great Ball', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png' },
+            { id: 'ultraball', name: 'Ultra Ball', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png' },
+            { id: 'masterball', name: 'Master Ball', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png' },
+            { id: 'luxuryball', name: 'Luxury Ball', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/luxury-ball.png' },
+            { id: 'leftovers', name: 'Leftovers', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/leftovers.png' },
+            { id: 'soothe-bell', name: 'Soothe Bell', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/soothe-bell.png' },
+            { id: 'light-ball', name: 'Light Ball', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/light-ball.png' },
+            { id: 'sweet-heart', name: 'Sweet Heart', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/sweet-heart.png' },
+            { id: 'amulet-coin', name: 'Amulet Coin', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/amulet-coin.png' }
         ];
 
         lucide.createIcons();
@@ -152,7 +172,9 @@
         const cameraContainer = document.getElementById('camera-container');
         const errorState = document.getElementById('error-state');
         const activeOverlay = document.getElementById('active-overlay');
+        const itemOverlay = document.getElementById('item-overlay');
         const selectorContainer = document.getElementById('pokemon-selector');
+        const itemSelectorContainer = document.getElementById('item-selector');
         const captureBtn = document.getElementById('capture-btn');
         const flipBtn = document.getElementById('flip-btn');
         const clearBtn = document.getElementById('clear-frame-btn');
@@ -162,19 +184,21 @@
         const previewModal = document.getElementById('preview-modal');
         const modalImage = document.getElementById('modal-image');
         const closeModalBtn = document.getElementById('close-modal-btn');
+        const downloadPhotoBtn = document.getElementById('download-photo-btn');
 
         let currentStream = null;
         let currentFacingMode = "user"; 
 
-        function buildSelector() {
+        // Build Carousels
+        function buildSelectors() {
+            // Characters
             pokemonList.forEach(poke => {
                 const item = document.createElement('div');
-                item.className = "flex-shrink-0 w-16 h-16 rounded-2xl glass-panel flex items-center justify-center p-2 cursor-pointer transition hover:border-[#f4e0a5]/60 active:scale-95";
+                item.className = "flex-shrink-0 w-14 h-14 rounded-xl glass-panel flex items-center justify-center p-2 cursor-pointer transition hover:border-[#f4e0a5]/60 active:scale-95";
                 item.innerHTML = `<img src="${poke.url}" class="w-full h-full object-contain opacity-60 hover:opacity-100 transition" alt="${poke.name}">`;
-                
                 item.addEventListener('click', () => {
                     activeOverlay.src = poke.url;
-                    activeOverlay.style.opacity = "0.75"; 
+                    activeOverlay.style.opacity = "0.85"; 
                     activeOverlay.style.setProperty('--poke-glow', poke.glow);
                     
                     video.style.filter = poke.tint;
@@ -183,23 +207,53 @@
                 });
                 selectorContainer.appendChild(item);
             });
+
+            // Decorations/Items
+            itemList.forEach(obj => {
+                const item = document.createElement('div');
+                item.className = "flex-shrink-0 w-12 h-12 rounded-xl glass-panel flex items-center justify-center p-1 cursor-pointer transition hover:border-white/40 active:scale-95";
+                item.innerHTML = `<img src="${obj.url}" class="w-10 h-10 object-contain pixelated" alt="${obj.name}">`;
+                item.addEventListener('click', () => {
+                    itemOverlay.src = obj.url;
+                    itemOverlay.style.opacity = "0.9";
+                });
+                itemSelectorContainer.appendChild(item);
+            });
         }
 
+        // Adaptive Laptop/Mobile Constraint Camera Switcher Engine
         async function startCamera() {
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
             video.style.transform = (currentFacingMode === "user") ? "scaleX(-1)" : "scaleX(1)";
 
+            const constraints = {
+                audio: false,
+                video: {
+                    facingMode: currentFacingMode,
+                    // FIX: Uses width/height ranges instead of fixed numbers so laptop screens don't crash
+                    width: { min: 640, ideal: 1080, max: 1920 },
+                    height: { min: 480, ideal: 1440, max: 1080 }
+                }
+            };
+
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: currentFacingMode, width: { ideal: 1080 }, height: { ideal: 1440 } },
-                    audio: false
-                });
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = currentStream;
                 errorState.classList.add('hidden');
                 video.classList.remove('hidden');
             } catch (err) {
-                video.classList.add('hidden');
-                errorState.classList.remove('hidden');
+                console.warn("Retrying with simplified camera fallback structure...");
+                try {
+                    // Laptop Widescreen Safe Fallback
+                    constraints.video.height = { ideal: 1080 };
+                    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = currentStream;
+                    errorState.classList.add('hidden');
+                    video.classList.remove('hidden');
+                } catch(fallbackErr) {
+                    video.classList.add('hidden');
+                    errorState.classList.remove('hidden');
+                }
             }
         }
 
@@ -209,13 +263,14 @@
         });
 
         clearBtn.addEventListener('click', () => {
-            activeOverlay.src = "";
-            activeOverlay.style.opacity = "0";
+            activeOverlay.src = ""; activeOverlay.style.opacity = "0";
+            itemOverlay.src = ""; itemOverlay.style.opacity = "0";
             video.style.filter = "none";
             statusOrb.style.backgroundColor = "#f4e0a5";
             cameraContainer.style.boxShadow = "0 0 30px rgba(244, 224, 165, 0.1), inset 0 0 20px rgba(244, 224, 165, 0.05)";
         });
 
+        // Photo Assembly Canvas Logic
         captureBtn.addEventListener('click', () => {
             document.body.style.backgroundColor = '#ffffff';
             setTimeout(() => { document.body.style.background = 'radial-gradient(circle at center, #12122c 0%, #05050f 100%)'; }, 100);
@@ -227,10 +282,13 @@
 
             const ctx = renderCanvas.getContext('2d');
             
+            // Core Base Composition Image Filter Chain
+            let activeFilters = "contrast(1.05) saturate(1.1) brightness(1.02) blur(0.4px)"; // Skin Smoothing Soft Filter
             const currentSelected = pokemonList.find(p => activeOverlay.src.includes(p.url));
             if(currentSelected) {
-                ctx.filter = currentSelected.tint;
+                activeFilters += " " + currentSelected.tint;
             }
+            ctx.filter = activeFilters;
 
             ctx.save();
             if(currentFacingMode === "user") {
@@ -241,37 +299,62 @@
             ctx.restore();
             ctx.filter = "none"; 
 
-            ctx.font = "bold " + (width * 0.035) + "px system-ui, sans-serif";
+            // Text Rendering Setup
+            ctx.font = "bold " + (width * 0.038) + "px system-ui, -apple-system, sans-serif";
             ctx.fillStyle = "#f4e0a5";
             ctx.textAlign = "center";
-            ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
-            ctx.shadowBlur = 8;
+            ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+            ctx.shadowBlur = 10;
             ctx.fillText("❤️ ARRA HEART MARK ❤️", width / 2, height * 0.08);
             ctx.shadowBlur = 0;
 
-            if (activeOverlay.src && activeOverlay.style.opacity !== "0") {
-                const overlayImg = new Image();
-                overlayImg.crossOrigin = "anonymous"; 
-                overlayImg.src = activeOverlay.src;
-                overlayImg.onload = function() {
-                    const size = width * 0.35; 
-                    const xOffset = width - size - (width * 0.05);
-                    const yOffset = height - size - (height * 0.05);
-                    
-                    ctx.globalAlpha = 0.85; 
-                    ctx.drawImage(overlayImg, xOffset, yOffset, size, size);
-                    showPhotoPreview();
-                };
-            } else {
-                showPhotoPreview();
+            // Load and draw layers safely using a unified promise sequence to prevent missing cuts
+            const drawLayers = [];
+
+            if (itemOverlay.src && itemOverlay.style.opacity !== "0") {
+                drawLayers.push(new Promise(res => {
+                    const img = new Image(); img.crossOrigin = "anonymous"; img.src = itemOverlay.src;
+                    img.onload = () => {
+                        const size = width * 0.22;
+                        ctx.drawImage(img, width * 0.05, height - size - (height * 0.05), size, size);
+                        res();
+                    };
+                }));
             }
+
+            if (activeOverlay.src && activeOverlay.style.opacity !== "0") {
+                drawLayers.push(new Promise(res => {
+                    const img = new Image(); img.crossOrigin = "anonymous"; img.src = activeOverlay.src;
+                    img.onload = () => {
+                        const size = width * 0.35;
+                        const x = width - size - (width * 0.05);
+                        const y = height - size - (height * 0.05);
+                        ctx.drawImage(img, x, y, size, size);
+                        res();
+                    };
+                }));
+            }
+
+            Promise.all(drawLayers).then(() => {
+                const dataUrl = renderCanvas.toDataURL('image/jpeg', 0.95);
+                modalImage.src = dataUrl;
+                previewModal.classList.remove('hidden');
+            });
         });
 
-        function showPhotoPreview() {
-            const dataUrl = renderCanvas.toDataURL('image/jpeg', 0.95);
-            modalImage.src = dataUrl;
-            previewModal.classList.remove('hidden');
-        }
+        // Force Blob download channel for rock-solid mobile device saving
+        downloadPhotoBtn.addEventListener('click', () => {
+            renderCanvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `arra_snapshot_${Date.now()}.jpg`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 'image/jpeg', 0.95);
+        });
 
         closeModalBtn.addEventListener('click', () => {
             previewModal.classList.add('hidden');
@@ -279,7 +362,7 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
-            buildSelector();
+            buildSelectors();
             startCamera();
         });
     </script>
