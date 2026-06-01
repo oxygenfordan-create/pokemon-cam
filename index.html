@@ -19,37 +19,30 @@
         }
         .aurora-glow {
             box-shadow: 0 0 30px rgba(244, 224, 165, 0.1), inset 0 0 20px rgba(244, 224, 165, 0.05);
-            transition: box-shadow 0.5s ease;
+            transition: all 0.6s ease-in-out;
         }
-        
-        /* Cosmic Gold Animation specifically triggered for Arceus */
-        .arceus-active {
-            box-shadow: 0 0 50px rgba(244, 224, 165, 0.5), inset 0 0 30px rgba(244, 224, 165, 0.2);
-            animation: arceus-pulse 3s infinite ease-in-out;
-        }
-
-        @keyframes arceus-pulse {
-            0%, 100% { filter: drop-shadow(0 0 5px rgba(244, 224, 165, 0.3)); }
-            50% { filter: drop-shadow(0 0 25px rgba(244, 224, 165, 0.7)); }
-        }
-
         .shutter-btn {
             background: linear-gradient(135deg, #222222 0%, #0a0a0a 100%);
             border: 2px solid #f4e0a5;
             box-shadow: 0 0 20px rgba(244, 224, 165, 0.3);
             transition: all 0.2s ease;
         }
-        .shutter-btn:active {
-            transform: scale(0.9);
-        }
-        /* Custom scrollbar hiding for the horizontal Pokémon selector */
+        .shutter-btn:active { transform: scale(0.9); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Smooth transition for active overlays */
         .pokemon-overlay-img {
-            transition: all 0.3s ease;
-            filter: drop-shadow(0 0 8px rgba(244, 224, 165, 0.6)) brightness(1.2);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            filter: drop-shadow(0 0 12px var(--poke-glow, rgba(244,224,165,0.4))) brightness(1.1);
+        }
+        video {
+            transition: filter 0.6s ease-in-out;
+        }
+        
+        /* Premium Golden Text Glow for the Banner Name */
+        .brand-banner {
+            text-shadow: 0 0 10px rgba(244, 224, 165, 0.4);
+            font-family: system-ui, -apple-system, sans-serif;
         }
     </style>
 </head>
@@ -57,7 +50,7 @@
 
     <header class="w-full max-w-md flex justify-between items-center z-10 pt-2">
         <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-[#f4e0a5] animate-pulse"></div>
+            <div id="status-orb" class="w-2 h-2 rounded-full bg-[#f4e0a5] animate-pulse"></div>
             <span class="text-xs tracking-[0.4em] uppercase text-[#f4e0a5] font-light">Ethereal Snapshot</span>
         </div>
         <button id="flip-btn" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-[#f4e0a5] hover:scale-105 transition">
@@ -78,21 +71,25 @@
         <div id="camera-container" class="w-[calc(100%-16px)] h-[calc(100%-16px)] rounded-2xl overflow-hidden aurora-glow relative bg-black/60">
             <video id="camera-stream" autoplay playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
             
-            <div class="absolute inset-0 flex items-center justify-center p-8 pointer-events-none z-10">
-                <img id="active-overlay" src="" class="w-full h-full object-contain opacity-0 pokemon-overlay-img" alt="Active Frame Overlay">
+            <div class="absolute top-4 left-0 right-0 text-center pointer-events-none z-10">
+                <span class="brand-banner text-[13px] tracking-[0.25em] font-medium text-[#f4e0a5] uppercase px-4 py-1.5 rounded-full bg-black/20 backdrop-blur-sm border border-[#f4e0a5]/10">
+                    ❤️ Arra heart Mark ❤️
+                </span>
+            </div>
+
+            <div class="absolute bottom-4 right-4 w-1/3 h-1/3 pointer-events-none z-10 flex items-end justify-end">
+                <img id="active-overlay" src="" class="max-w-full max-h-full object-contain opacity-0 pokemon-overlay-img" alt="Active Frame Overlay">
             </div>
 
             <div id="error-state" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center hidden bg-slate-950/90">
                 <i data-lucide="video-off" class="w-8 h-8 text-[#f4e0a5]/50 mb-2"></i>
-                <p class="text-xs text-[#f4e0a5]/80 tracking-wide">Seeking sync with local device camera hardware...</p>
+                <p class="text-xs text-[#f4e0a5]/80 tracking-wide">Seeking connection with device camera hardware...</p>
             </div>
         </div>
     </main>
 
     <footer class="w-full max-w-md flex flex-col gap-4 mb-2 z-10">
-        
-        <div id="pokemon-selector" class="w-full flex gap-3 overflow-x-auto no-scrollbar py-2 px-1">
-        </div>
+        <div id="pokemon-selector" class="w-full flex gap-3 overflow-x-auto no-scrollbar py-2 px-1"></div>
 
         <div class="w-full glass-panel rounded-3xl p-4 flex items-center justify-between">
             <button id="clear-frame-btn" class="w-12 h-12 rounded-full flex items-center justify-center text-rose-300/60 hover:text-rose-400 transition">
@@ -111,21 +108,42 @@
         </div>
     </footer>
 
+    <div id="preview-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 hidden">
+        <div class="glass-panel p-4 rounded-3xl max-w-sm w-full flex flex-col items-center gap-4">
+            <h3 class="text-xs tracking-widest text-[#f4e0a5] uppercase">Photo Captured</h3>
+            <div class="w-full aspect-[3/4] rounded-2xl overflow-hidden border border-[#f4e0a5]/20 bg-black">
+                <img id="modal-image" class="w-full h-full object-cover" src="" alt="Captured Image">
+            </div>
+            <p class="text-[11px] text-slate-400 text-center px-4">
+                <i data-lucide="smartphone" class="w-4 h-4 inline mr-1 text-[#f4e0a5]"></i> 
+                Tap and hold the photo above to select <strong>"Save to Photos"</strong> or copy it.
+            </p>
+            <button id="close-modal-btn" class="w-full py-2 rounded-xl bg-white/5 border border-white/10 text-xs tracking-wider uppercase hover:bg-white/10 transition">
+                Return to Camera
+            </button>
+        </div>
+    </div>
+
     <canvas id="render-canvas" class="hidden"></canvas>
 
     <script>
-        // Updated Data Array containing Arceus at the very front!
+        // Data Configuration Array: 15 Core Entities (Arceus is 1st, Bulbasaur is 8th)
         const pokemonList = [
-            { id: 'arceus', name: 'Arceus', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/493.svg' },
-            { id: 'bulbasaur', name: 'Bulbasaur', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/1.svg' },
-            { id: 'pikachu', name: 'Pikachu', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/25.svg' },
-            { id: 'charizard', name: 'Charizard', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/6.svg' },
-            { id: 'mewtwo', name: 'Mewtwo', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/150.svg' },
-            { id: 'gengar', name: 'Gengar', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/94.svg' },
-            { id: 'lugia', name: 'Lugia', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/249.svg' },
-            { id: 'rayquaza', name: 'Rayquaza', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/384.svg' },
-            { id: 'lucario', name: 'Lucario', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/448.svg' },
-            { id: 'eevee', name: 'Eevee', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/133.svg' }
+            { id: 'arceus', name: 'Arceus', tint: 'sepia(0.15) hue-rotate(10deg) saturate(1.1)', glow: '#f4e0a5', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/493.svg' },
+            { id: 'pikachu', name: 'Pikachu', tint: 'sepia(0.1) saturate(1.3) hue-rotate(5deg)', glow: '#facc15', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/25.svg' },
+            { id: 'charizard', name: 'Charizard', tint: 'saturate(1.2) hue-rotate(-10deg)', glow: '#f97316', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/6.svg' },
+            { id: 'mewtwo', name: 'Mewtwo', tint: 'hue-rotate(240deg) saturate(0.9) brightness(1.05)', glow: '#c084fc', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/150.svg' },
+            { id: 'gengar', name: 'Gengar', tint: 'hue-rotate(220deg) contrast(1.1)', glow: '#a855f7', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/94.svg' },
+            { id: 'lugia', name: 'Lugia', tint: 'hue-rotate(160deg) saturate(0.85)', glow: '#38bdf8', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/249.svg' },
+            { id: 'rayquaza', name: 'Rayquaza', tint: 'hue-rotate(80deg) saturate(1.1)', glow: '#22c55e', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/384.svg' },
+            { id: 'bulbasaur', name: 'Bulbasaur', tint: 'hue-rotate(90deg) saturate(1.15) brightness(1.02)', glow: '#2dd4bf', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/1.svg' },
+            { id: 'lucario', name: 'Lucario', tint: 'hue-rotate(170deg) contrast(1.05)', glow: '#60a5fa', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/448.svg' },
+            { id: 'gardevoir', name: 'Gardevoir', tint: 'hue-rotate(110deg) saturate(0.9)', glow: '#4ade80', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/282.svg' },
+            { id: 'eevee', name: 'Eevee', tint: 'sepia(0.2) saturate(1.1)', glow: '#fb923c', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/133.svg' },
+            { id: 'mew', name: 'Mew', tint: 'hue-rotate(300deg) saturate(1.2)', glow: '#f472b6', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/151.svg' },
+            { id: 'greninja', name: 'Greninja', tint: 'hue-rotate(190deg) contrast(1.15)', glow: '#1d4ed8', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/658.svg' },
+            { id: 'blastoise', name: 'Blastoise', tint: 'hue-rotate(180deg) saturate(1.1)', glow: '#2563eb', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/9.svg' },
+            { id: 'snorlax', name: 'Snorlax', tint: 'hue-rotate(140deg) saturate(0.7) brightness(0.95)', glow: '#0f766e', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/143.svg' }
         ];
 
         lucide.createIcons();
@@ -139,11 +157,15 @@
         const flipBtn = document.getElementById('flip-btn');
         const clearBtn = document.getElementById('clear-frame-btn');
         const renderCanvas = document.getElementById('render-canvas');
+        const statusOrb = document.getElementById('status-orb');
+
+        const previewModal = document.getElementById('preview-modal');
+        const modalImage = document.getElementById('modal-image');
+        const closeModalBtn = document.getElementById('close-modal-btn');
 
         let currentStream = null;
         let currentFacingMode = "user"; 
 
-        // Render Carousel Icons into UI Layout
         function buildSelector() {
             pokemonList.forEach(poke => {
                 const item = document.createElement('div');
@@ -152,67 +174,49 @@
                 
                 item.addEventListener('click', () => {
                     activeOverlay.src = poke.url;
-                    activeOverlay.style.opacity = "0.35"; 
-
-                    // Check if Arceus was clicked to add the legendary visual effect
-                    if (poke.id === 'arceus') {
-                        cameraContainer.classList.add('arceus-active');
-                    } else {
-                        cameraContainer.classList.remove('arceus-active');
-                    }
+                    activeOverlay.style.opacity = "0.75"; 
+                    activeOverlay.style.setProperty('--poke-glow', poke.glow);
+                    
+                    video.style.filter = poke.tint;
+                    statusOrb.style.backgroundColor = poke.glow;
+                    cameraContainer.style.boxShadow = `0 0 30px ${poke.glow}25, inset 0 0 20px ${poke.glow}10`;
                 });
                 selectorContainer.appendChild(item);
             });
         }
 
-        // Initialize Camera Stream Control Engine
         async function startCamera() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
-
-            if(currentFacingMode === "user") {
-                video.style.transform = "scaleX(-1)";
-            } else {
-                video.style.transform = "scaleX(1)";
-            }
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
+            video.style.transform = (currentFacingMode === "user") ? "scaleX(-1)" : "scaleX(1)";
 
             try {
-                const constraints = {
-                    video: { 
-                        facingMode: currentFacingMode,
-                        width: { ideal: 1080 },
-                        height: { ideal: 1440 }
-                    },
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: { ideal: 1080 }, height: { ideal: 1440 } },
                     audio: false
-                };
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                });
                 video.srcObject = currentStream;
                 errorState.classList.add('hidden');
                 video.classList.remove('hidden');
             } catch (err) {
-                console.error("Camera Device Connection Interrupted: ", err);
                 video.classList.add('hidden');
                 errorState.classList.remove('hidden');
             }
         }
 
-        // Flip Camera Track Trigger
         flipBtn.addEventListener('click', () => {
             currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
             startCamera();
         });
 
-        // Clear Frame Image
         clearBtn.addEventListener('click', () => {
             activeOverlay.src = "";
             activeOverlay.style.opacity = "0";
-            cameraContainer.classList.remove('arceus-active');
+            video.style.filter = "none";
+            statusOrb.style.backgroundColor = "#f4e0a5";
+            cameraContainer.style.boxShadow = "0 0 30px rgba(244, 224, 165, 0.1), inset 0 0 20px rgba(244, 224, 165, 0.05)";
         });
 
-        // Capture Picture Canvas Merge and Local File System Downloader Utility
         captureBtn.addEventListener('click', () => {
-            // Screen Flash Feedback
             document.body.style.backgroundColor = '#ffffff';
             setTimeout(() => { document.body.style.background = 'radial-gradient(circle at center, #12122c 0%, #05050f 100%)'; }, 100);
 
@@ -223,6 +227,11 @@
 
             const ctx = renderCanvas.getContext('2d');
             
+            const currentSelected = pokemonList.find(p => activeOverlay.src.includes(p.url));
+            if(currentSelected) {
+                ctx.filter = currentSelected.tint;
+            }
+
             ctx.save();
             if(currentFacingMode === "user") {
                 ctx.translate(width, 0);
@@ -230,36 +239,45 @@
             }
             ctx.drawImage(video, 0, 0, width, height);
             ctx.restore();
+            ctx.filter = "none"; 
+
+            ctx.font = "bold " + (width * 0.035) + "px system-ui, sans-serif";
+            ctx.fillStyle = "#f4e0a5";
+            ctx.textAlign = "center";
+            ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+            ctx.shadowBlur = 8;
+            ctx.fillText("❤️ ARRA HEART MARK ❤️", width / 2, height * 0.08);
+            ctx.shadowBlur = 0;
 
             if (activeOverlay.src && activeOverlay.style.opacity !== "0") {
                 const overlayImg = new Image();
                 overlayImg.crossOrigin = "anonymous"; 
                 overlayImg.src = activeOverlay.src;
                 overlayImg.onload = function() {
-                    const padding = width * 0.1;
-                    const destWidth = width - (padding * 2);
-                    const destHeight = height - (padding * 2);
+                    const size = width * 0.35; 
+                    const xOffset = width - size - (width * 0.05);
+                    const yOffset = height - size - (height * 0.05);
                     
-                    ctx.globalAlpha = 0.45; 
-                    ctx.drawImage(overlayImg, padding, padding, destWidth, destHeight);
-                    saveCanvasToDevice();
+                    ctx.globalAlpha = 0.85; 
+                    ctx.drawImage(overlayImg, xOffset, yOffset, size, size);
+                    showPhotoPreview();
                 };
             } else {
-                saveCanvasToDevice();
+                showPhotoPreview();
             }
         });
 
-        function saveCanvasToDevice() {
-            const dataUrl = renderCanvas.toDataURL('image/jpeg', 0.92);
-            const downloadLink = document.createElement('a');
-            downloadLink.download = `poke_snapshot_${Date.now()}.jpg`;
-            downloadLink.href = dataUrl;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
+        function showPhotoPreview() {
+            const dataUrl = renderCanvas.toDataURL('image/jpeg', 0.95);
+            modalImage.src = dataUrl;
+            previewModal.classList.remove('hidden');
         }
 
-        // Initialize execution
+        closeModalBtn.addEventListener('click', () => {
+            previewModal.classList.add('hidden');
+            modalImage.src = "";
+        });
+
         window.addEventListener('DOMContentLoaded', () => {
             buildSelector();
             startCamera();
