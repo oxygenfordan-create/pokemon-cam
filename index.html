@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Celestial Prism - Pokémon Camera Booth</title>
+    <title>Celestial Prism - Pokémon Super Booth</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body {
             background: radial-gradient(circle at center, #12122c 0%, #05050f 100%);
-            overflow: hidden;
+            overflow-x: hidden;
         }
         .glass-panel {
             background: rgba(255, 255, 255, 0.03);
@@ -19,7 +19,7 @@
         }
         .aurora-glow {
             box-shadow: 0 0 30px rgba(244, 224, 165, 0.1), inset 0 0 20px rgba(244, 224, 165, 0.05);
-            transition: all 0.6s ease-in-out;
+            transition: all 0.4s ease-in-out;
         }
         .shutter-btn {
             background: linear-gradient(135deg, #222222 0%, #0a0a0a 100%);
@@ -31,15 +31,26 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Interactive Asset Elements */
-        .pokemon-overlay-img, .item-overlay-img {
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        video { transition: filter 0.2s linear; }
+        .brand-banner { text-shadow: 0 0 10px rgba(244, 224, 165, 0.4); }
+
+        /* Shake animation for the Gacha wild grass patch button */
+        @keyframes grass-shake {
+            0%, 100% { transform: rotate(0deg); }
+            20%, 60% { transform: rotate(-10deg); }
+            40%, 80% { transform: rotate(10deg); }
         }
-        video {
-            transition: filter 0.6s ease-in-out;
-        }
-        .brand-banner {
-            text-shadow: 0 0 10px rgba(244, 224, 165, 0.4);
+        .shake-hover:hover { animation: grass-shake 0.5s ease infinite; }
+        
+        /* Floating Canvas Stamp Style */
+        .camera-stamp {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 15;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
         }
     </style>
 </head>
@@ -50,9 +61,14 @@
             <div id="status-orb" class="w-2 h-2 rounded-full bg-[#f4e0a5] animate-pulse"></div>
             <span class="text-xs tracking-[0.4em] uppercase text-[#f4e0a5] font-light">Ethereal Snapshot</span>
         </div>
-        <button id="flip-btn" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-[#f4e0a5] hover:scale-105 transition">
-            <i data-lucide="camera-reverse" class="w-5 h-5"></i>
-        </button>
+        <div class="flex gap-2">
+            <button id="mode-toggle-btn" class="px-3 py-1 rounded-full glass-panel text-[10px] tracking-widest uppercase text-[#f4e0a5] border border-[#f4e0a5]/30 flex items-center gap-1">
+                <i data-lucide="layers" class="w-3 h-3"></i> <span id="mode-text">1-POUCH</span>
+            </button>
+            <button id="flip-btn" class="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-[#f4e0a5] hover:scale-105 transition">
+                <i data-lucide="camera-reverse" class="w-4 h-4"></i>
+            </button>
+        </div>
     </header>
 
     <main class="relative w-full max-w-md aspect-[3/4] my-auto flex items-center justify-center">
@@ -65,9 +81,13 @@
             </div>
         </div>
 
-        <div id="camera-container" class="w-[calc(100%-16px)] h-[calc(100%-16px)] rounded-2xl overflow-hidden aurora-glow relative bg-black/60">
+        <div id="camera-container" class="w-[calc(100%-16px)] h-[calc(100%-16px)] rounded-2xl overflow-hidden aurora-glow relative bg-black/60 cursor-crosshair">
             <video id="camera-stream" autoplay playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
             
+            <div id="stamps-layer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+            <div id="countdown-overlay" class="absolute inset-0 flex items-center justify-center text-6xl font-bold tracking-widest text-[#f4e0a5] bg-black/30 backdrop-blur-xs hidden z-30">3</div>
+
             <div class="absolute top-4 left-0 right-0 text-center pointer-events-none z-10">
                 <span class="brand-banner text-[13px] tracking-[0.25em] font-medium text-[#f4e0a5] uppercase px-4 py-1.5 rounded-full bg-black/20 backdrop-blur-sm border border-[#f4e0a5]/10">
                     ❤️ Arra heart Mark ❤️
@@ -75,68 +95,89 @@
             </div>
 
             <div class="absolute bottom-4 left-4 w-1/4 h-1/4 pointer-events-none z-10 flex items-end justify-start">
-                <img id="item-overlay" src="" class="max-w-full max-h-full object-contain opacity-0 item-overlay-img" alt="Cute Item">
+                <img id="item-overlay" src="" class="max-w-full max-h-full object-contain opacity-0 transition-all duration-300" alt="Cute Item">
             </div>
 
             <div class="absolute bottom-4 right-4 w-1/3 h-1/3 pointer-events-none z-10 flex items-end justify-end">
-                <img id="active-overlay" src="" class="max-w-full max-h-full object-contain opacity-0 pokemon-overlay-img" alt="Active Character Overlay">
+                <img id="active-overlay" src="" class="max-w-full max-h-full object-contain opacity-0 transition-all duration-300" alt="Active Character Overlay">
             </div>
 
             <div id="error-state" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center hidden bg-slate-950/90">
                 <i data-lucide="video-off" class="w-8 h-8 text-[#f4e0a5]/50 mb-2"></i>
-                <p class="text-xs text-[#f4e0a5]/80 tracking-wide">Seeking connection with device camera hardware...</p>
+                <p class="text-xs text-[#f4e0a5]/80 tracking-wide">Please connect web camera access...</p>
             </div>
         </div>
     </main>
 
-    <footer class="w-full max-w-md flex flex-col gap-2 mb-2 z-10">
-        <span class="text-[10px] tracking-widest text-[#f4e0a5]/60 uppercase pl-1">Decorations</span>
-        <div id="item-selector" class="w-full flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1"></div>
-
-        <span class="text-[10px] tracking-widest text-[#f4e0a5]/60 uppercase pl-1">Characters</span>
-        <div id="pokemon-selector" class="w-full flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1"></div>
-
-        <div class="w-full glass-panel rounded-3xl p-4 flex items-center justify-between mt-2">
-            <button id="clear-frame-btn" class="w-12 h-12 rounded-full flex items-center justify-center text-rose-300/60 hover:text-rose-400 transition">
-                <i data-lucide="ban" class="w-5 h-5"></i>
-            </button>
-
-            <button id="capture-btn" aria-label="Capture photo" class="shutter-btn w-16 h-16 rounded-full flex items-center justify-center">
-                <div class="w-12 h-12 rounded-full border border-[#f4e0a5]/20 flex items-center justify-center">
-                    <div class="w-3 h-3 rounded-full bg-[#f4e0a5]"></div>
+    <footer class="w-full max-w-md flex flex-col gap-1.5 z-10">
+        
+        <div class="w-full glass-panel rounded-2xl p-3 flex flex-col gap-2 mb-1">
+            <div class="flex items-center justify-between text-[10px] tracking-widest text-[#f4e0a5] uppercase">
+                <span><i data-lucide="sliders" class="w-3 h-3 inline mr-1"></i> Live Enhancer Touch-Up</span>
+                <span id="gacha-btn" class="shake-hover cursor-pointer px-2 py-0.5 rounded bg-[#f4e0a5]/20 border border-[#f4e0a5]/40 flex items-center gap-1 text-[9px] text-white">
+                    🌿 Mystery Grass Gacha
+                </span>
+            </div>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-[9px] text-slate-400 w-12">Soft Blur</span>
+                    <input id="slider-blur" type="range" min="0" max="2" step="0.1" value="0.4" class="w-full accent-[#f4e0a5] h-1 bg-white/10 rounded-lg appearance-none">
                 </div>
-            </button>
-
-            <div class="w-12 h-12 rounded-full flex items-center justify-center text-[#f4e0a5]/40">
-                <i data-lucide="sparkles" class="w-5 h-5"></i>
+                <div class="flex items-center gap-2">
+                    <span class="text-[9px] text-slate-400 w-12">Light</span>
+                    <input id="slider-bright" type="range" min="0.8" max="1.3" step="0.02" value="1.02" class="w-full accent-[#f4e0a5] h-1 bg-white/10 rounded-lg appearance-none">
+                </div>
             </div>
         </div>
 
-        <div class="w-full glass-panel rounded-3xl p-4 mt-4">
-            <div class="flex items-center justify-between mb-3 gap-2">
-                <div>
-                    <p class="text-xs uppercase tracking-[0.25em] text-[#f4e0a5]/70">Saved Gallery</p>
-                    <span id="gallery-count" class="text-[10px] text-[#f4e0a5]/60">0 photos</span>
+        <span class="text-[9px] tracking-widest text-[#f4e0a5]/60 uppercase pl-1">Decorations (Tap to equip / Tap screen to place stamps)</span>
+        <div id="item-selector" class="w-full flex gap-2 overflow-x-auto no-scrollbar pb-1 px-1"></div>
+
+        <span class="text-[9px] tracking-widest text-[#f4e0a5]/60 uppercase pl-1">Characters</span>
+        <div id="pokemon-selector" class="w-full flex gap-2 overflow-x-auto no-scrollbar pb-1 px-1"></div>
+
+        <div class="w-full glass-panel rounded-3xl p-3 flex items-center justify-between mt-1">
+            <button id="clear-frame-btn" class="w-10 h-10 rounded-full flex items-center justify-center text-rose-300/60 hover:text-rose-400 transition">
+                <i data-lucide="ban" class="w-4 h-4"></i>
+            </button>
+
+            <button id="capture-btn" class="shutter-btn w-14 h-14 rounded-full flex items-center justify-center">
+                <div class="w-10 h-10 rounded-full border border-[#f4e0a5]/20 flex items-center justify-center">
+                    <div class="w-2.5 h-2.5 rounded-full bg-[#f4e0a5]"></div>
                 </div>
-                <button id="clear-gallery-btn" class="py-2 px-3 rounded-full border border-[#f4e0a5]/30 text-[10px] uppercase tracking-[0.25em] text-[#f4e0a5] hover:bg-[#f4e0a5]/10 transition">
-                    Clear Gallery
-                </button>
-            </div>
-            <div id="saved-gallery" class="grid grid-cols-4 gap-2"></div>
+            </button>
+
+            <button id="album-toggle-btn" class="w-10 h-10 rounded-full flex items-center justify-center text-[#f4e0a5] relative">
+                <i data-lucide="folder-heart" class="w-4 h-4"></i>
+                <div id="album-badge" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 hidden"></div>
+            </button>
         </div>
     </footer>
 
+    <div id="album-drawer" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 transform translate-y-full transition-transform duration-300 p-6 flex flex-col justify-between">
+        <div class="w-full max-w-md mx-auto flex flex-col h-full justify-between">
+            <div class="flex justify-between items-center pb-4 border-b border-white/10">
+                <h3 class="text-xs tracking-widest uppercase text-[#f4e0a5]">Your Memory Storage Room</h3>
+                <button id="close-album-btn" class="text-slate-400 text-xs tracking-widest uppercase">Minimize</button>
+            </div>
+            <div id="album-grid" class="grid grid-cols-2 gap-4 my-auto overflow-y-auto max-h-[70vh] p-2 no-scrollbar">
+                <p class="text-xs text-slate-500 text-center col-span-2 py-10">No pictures snapped yet this session.</p>
+            </div>
+            <div class="w-full pt-4">
+                <button id="clear-album-btn" class="w-full py-2.5 text-xs text-rose-400 border border-rose-500/20 bg-rose-500/5 rounded-xl uppercase tracking-widest">Wipe Memory Album</button>
+            </div>
+        </div>
+    </div>
+
     <div id="preview-modal" class="fixed inset-0 bg-black/85 backdrop-blur-xl z-50 flex flex-col items-center justify-center p-6 hidden">
         <div class="glass-panel p-4 rounded-3xl max-w-sm w-full flex flex-col items-center gap-4">
-            <h3 class="text-xs tracking-widest text-[#f4e0a5] uppercase">Photo Captured</h3>
+            <h3 class="text-xs tracking-widest text-[#f4e0a5] uppercase">Photo Processed</h3>
             <div class="w-full aspect-[3/4] rounded-2xl overflow-hidden border border-[#f4e0a5]/20 bg-black">
                 <img id="modal-image" class="w-full h-full object-cover" src="" alt="Captured Image">
             </div>
-            
-            <button id="download-photo-btn" class="w-full py-3 rounded-xl bg-gradient-to-r from-[#f4e0a5]/20 to-[#f4e0a5]/5 border border-[#f4e0a5]/40 text-xs font-medium tracking-widest text-[#f4e0a5] uppercase hover:brightness-110 transition flex items-center justify-center gap-2 shadow-lg">
-                <i data-lucide="download" class="w-4 h-4"></i> Save to Device Gallery
+            <button id="download-photo-btn" class="w-full py-3 rounded-xl bg-gradient-to-r from-[#f4e0a5]/30 to-[#f4e0a5]/10 border border-[#f4e0a5]/50 text-xs font-semibold tracking-widest text-[#f4e0a5] uppercase hover:brightness-110 transition flex items-center justify-center gap-2 shadow-lg">
+                <i data-lucide="image" class="w-4 h-4"></i> Export to Photo Gallery
             </button>
-            
             <button id="close-modal-btn" class="w-full py-2 rounded-xl bg-white/5 border border-white/10 text-xs tracking-wider uppercase text-slate-400 hover:text-white transition">
                 Return to Camera
             </button>
@@ -146,7 +187,27 @@
     <canvas id="render-canvas" class="hidden"></canvas>
 
     <script>
-        // Core Characters Array Configuration
+        // Synth Audio FX Architecture Modules without third-party files
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration, vol=0.1) {
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+        
+        function playBeep() { playTone(587.33, 'sine', 0.08); }
+        function playShutter() { playTone(120, 'triangle', 0.2, 0.4); playTone(800, 'sine', 0.03, 0.1); }
+        function playCelestialChime() {
+            const times = [0, 0.08, 0.16, 0.24]; const freqs = [523.25, 659.25, 783.99, 1046.50];
+            times.forEach((t, i) => setTimeout(() => playTone(freqs[i], 'triangle', 0.4, 0.15), t * 1000));
+        }
+
         const pokemonList = [
             { id: 'arceus', name: 'Arceus', tint: 'sepia(0.12) saturate(1.15) brightness(1.02)', glow: '#f4e0a5', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/493.svg' },
             { id: 'pikachu', name: 'Pikachu', tint: 'sepia(0.08) saturate(1.25) brightness(1.02)', glow: '#facc15', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/25.svg' },
@@ -165,7 +226,6 @@
             { id: 'snorlax', name: 'Snorlax', tint: 'hue-rotate(140deg) saturate(0.7) brightness(0.98)', glow: '#0f766e', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/143.svg' }
         ];
 
-        // NEW: 10 Cute Pokémon Items & Objects
         const itemList = [
             { id: 'pokeball', name: 'Poké Ball', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png' },
             { id: 'greatball', name: 'Great Ball', url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png' },
@@ -181,267 +241,308 @@
 
         lucide.createIcons();
 
+        // UI Target Hooks
         const video = document.getElementById('camera-stream');
         const cameraContainer = document.getElementById('camera-container');
         const errorState = document.getElementById('error-state');
         const activeOverlay = document.getElementById('active-overlay');
         const itemOverlay = document.getElementById('item-overlay');
+        const stampsLayer = document.getElementById('stamps-layer');
+        const countdownOverlay = document.getElementById('countdown-overlay');
+        
         const selectorContainer = document.getElementById('pokemon-selector');
         const itemSelectorContainer = document.getElementById('item-selector');
         const captureBtn = document.getElementById('capture-btn');
         const flipBtn = document.getElementById('flip-btn');
         const clearBtn = document.getElementById('clear-frame-btn');
-        const renderCanvas = document.getElementById('render-canvas');
-        const statusOrb = document.getElementById('status-orb');
+        const gachaBtn = document.getElementById('gacha-btn');
+        const modeToggleBtn = document.getElementById('mode-toggle-btn');
+        const modeText = document.getElementById('mode-text');
+        
+        // Enhancer Slider Hooks
+        const blurSlider = document.getElementById('slider-blur');
+        const brightSlider = document.getElementById('slider-bright');
+        
+        // Album System Hooks
+        const albumToggleBtn = document.getElementById('album-toggle-btn');
+        const albumDrawer = document.getElementById('album-drawer');
+        const closeAlbumBtn = document.getElementById('close-album-btn');
+        const albumGrid = document.getElementById('album-grid');
+        const clearAlbumBtn = document.getElementById('clear-album-btn');
+        const albumBadge = document.getElementById('album-badge');
 
         const previewModal = document.getElementById('preview-modal');
         const modalImage = document.getElementById('modal-image');
         const closeModalBtn = document.getElementById('close-modal-btn');
         const downloadPhotoBtn = document.getElementById('download-photo-btn');
-        const galleryCount = document.getElementById('gallery-count');
-        const savedGallery = document.getElementById('saved-gallery');
-        const clearGalleryBtn = document.getElementById('clear-gallery-btn');
-        const STORAGE_KEY = 'pokemon-camera-saved-gallery';
-        const MAX_SAVED_PHOTOS = 16;
-        let savedPhotos = [];
+        const renderCanvas = document.getElementById('render-canvas');
 
-        let currentStream = null;
-        let currentFacingMode = "user"; 
+        let currentStream = null, currentFacingMode = "user", globalBlob = null;
+        let selectedCharacter = null, selectedDecoration = null, isFourCutMode = false;
+        let stampsArray = []; // Local tracking array for absolute tap positions
 
-        // Build Carousels
-        function buildSelectors() {
-            // Characters
+        // Update CSS filters dynamically based on enhancement sliders and selected character
+        function applyLiveFilters() {
+            let filterString = `blur(${blurSlider.value}px) brightness(${brightSlider.value}) contrast(1.04) saturate(1.08)`;
+            if(selectedCharacter) { filterString += " " + selectedCharacter.tint; }
+            video.style.filter = filterString;
+        }
+        [blurSlider, brightSlider].forEach(slider => slider.addEventListener('input', applyLiveFilters));
+
+        // Tap-to-Stamp Placement inside viewport logic
+        cameraContainer.addEventListener('click', (e) => {
+            if(!selectedDecoration) return;
+            const rect = cameraContainer.getBoundingClientRect();
+            const pctX = (e.clientX - rect.left) / rect.width;
+            const pctY = (e.clientY - rect.top) / rect.height;
+            
+            stampsArray.push({ url: selectedDecoration.url, x: pctX, y: pctY });
+            renderStampsUI();
+            playTone(440, 'sine', 0.05, 0.05);
+        });
+
+        function renderStampsUI() {
+            stampsLayer.innerHTML = "";
+            stampsArray.forEach(stamp => {
+                const img = document.createElement('img');
+                img.src = stamp.url; img.className = "camera-stamp";
+                img.style.left = `${stamp.x * 100}%`; img.style.top = `${stamp.y * 100}%`;
+                stampsLayer.appendChild(img);
+            });
+        }
+
+        // Horizontal selectors build layout script
+        function initSelectors() {
             pokemonList.forEach(poke => {
                 const item = document.createElement('div');
-                item.className = "flex-shrink-0 w-14 h-14 rounded-xl glass-panel flex items-center justify-center p-2 cursor-pointer transition hover:border-[#f4e0a5]/60 active:scale-95";
-                item.innerHTML = `<img src="${poke.url}" class="w-full h-full object-contain opacity-60 hover:opacity-100 transition" alt="${poke.name}">`;
+                item.className = "flex-shrink-0 w-12 h-12 rounded-xl glass-panel flex items-center justify-center p-1.5 cursor-pointer transition hover:border-[#f4e0a5]/60 active:scale-95";
+                item.innerHTML = `<img src="${poke.url}" class="w-full h-full object-contain" alt="${poke.name}">`;
                 item.addEventListener('click', () => {
-                    activeOverlay.src = poke.url;
-                    activeOverlay.style.opacity = "0.85"; 
-                    activeOverlay.style.setProperty('--poke-glow', poke.glow);
-                    
-                    video.style.filter = poke.tint;
-                    statusOrb.style.backgroundColor = poke.glow;
-                    cameraContainer.style.boxShadow = `0 0 30px ${poke.glow}25, inset 0 0 20px ${poke.glow}10`;
+                    selectedCharacter = poke; activeOverlay.src = poke.url; activeOverlay.style.opacity = "0.85";
+                    document.getElementById('status-orb').style.backgroundColor = poke.glow;
+                    if(poke.id === 'arceus') { playCelestialChime(); } else { playBeep(); }
+                    applyLiveFilters();
                 });
                 selectorContainer.appendChild(item);
             });
 
-            // Decorations/Items
             itemList.forEach(obj => {
                 const item = document.createElement('div');
-                item.className = "flex-shrink-0 w-12 h-12 rounded-xl glass-panel flex items-center justify-center p-1 cursor-pointer transition hover:border-white/40 active:scale-95";
-                item.innerHTML = `<img src="${obj.url}" class="w-10 h-10 object-contain pixelated" alt="${obj.name}">`;
+                item.className = "flex-shrink-0 w-10 h-10 rounded-xl glass-panel flex items-center justify-center p-1 cursor-pointer transition hover:border-white/40 active:scale-95";
+                item.innerHTML = `<img src="${obj.url}" class="w-8 h-8 object-contain" alt="${obj.name}">`;
                 item.addEventListener('click', () => {
-                    itemOverlay.src = obj.url;
-                    itemOverlay.style.opacity = "0.9";
+                    selectedDecoration = obj; itemOverlay.src = obj.url; itemOverlay.style.opacity = "0.9"; playBeep();
                 });
                 itemSelectorContainer.appendChild(item);
             });
         }
 
-        // Adaptive Laptop/Mobile Constraint Camera Switcher Engine
+        // Mystery Grass Gacha Encounter Randomizer
+        gachaBtn.addEventListener('click', () => {
+            let ticks = 0;
+            const interval = setInterval(() => {
+                const rand = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+                activeOverlay.src = rand.url; activeOverlay.style.opacity = "0.85";
+                playTone(300 + (ticks * 20), 'sine', 0.03, 0.05);
+                ticks++;
+                if(ticks > 12) {
+                    clearInterval(interval);
+                    selectedCharacter = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+                    activeOverlay.src = selectedCharacter.url;
+                    if(selectedCharacter.id === 'arceus') {
+                        document.body.style.backgroundColor = '#f4e0a5'; setTimeout(() => document.body.style.background = '', 200);
+                        playCelestialChime();
+                    } else { playBeep(); }
+                    applyLiveFilters();
+                }
+            }, 80);
+        });
+
+        // 4-Cut Multi Pose Booth Mode Toggler Engine
+        modeToggleBtn.addEventListener('click', () => {
+            isFourCutMode = !isFourCutMode;
+            modeText.innerText = isFourCutMode ? "4-CUT" : "1-POUCH";
+            modeToggleBtn.style.borderColor = isFourCutMode ? "#f43f5e" : "#f4e0a5";
+            playBeep();
+        });
+
+        // Safe Device Stream Hook Pipeline
         async function startCamera() {
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
             video.style.transform = (currentFacingMode === "user") ? "scaleX(-1)" : "scaleX(1)";
-
-            const constraints = {
-                audio: false,
-                video: {
-                    facingMode: currentFacingMode,
-                    // FIX: Uses width/height ranges instead of fixed numbers so laptop screens don't crash
-                    width: { min: 640, ideal: 1080, max: 1920 },
-                    height: { min: 480, ideal: 1440, max: 1080 }
-                }
-            };
-
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = currentStream;
-                errorState.classList.add('hidden');
-                video.classList.remove('hidden');
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    audio: false, video: { facingMode: currentFacingMode, width: { ideal: 1080 }, height: { ideal: 1440 } }
+                });
+                video.srcObject = currentStream; errorState.classList.add('hidden'); video.classList.remove('hidden');
             } catch (err) {
-                console.warn("Retrying with simplified camera fallback structure...");
-                try {
-                    // Laptop Widescreen Safe Fallback
-                    constraints.video.height = { ideal: 1080 };
-                    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-                    video.srcObject = currentStream;
-                    errorState.classList.add('hidden');
-                    video.classList.remove('hidden');
-                } catch(fallbackErr) {
-                    video.classList.add('hidden');
-                    errorState.classList.remove('hidden');
-                }
+                errorState.classList.remove('hidden');
             }
         }
+        flipBtn.addEventListener('click', () => { currentFacingMode = (currentFacingMode === "user") ? "environment" : "user"; startCamera(); });
 
-        flipBtn.addEventListener('click', () => {
-            currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
-            startCamera();
-        });
-
+        // Clean Canvas Clearing
         clearBtn.addEventListener('click', () => {
+            selectedCharacter = null; selectedDecoration = null; stampsArray = []; renderStampsUI();
             activeOverlay.src = ""; activeOverlay.style.opacity = "0";
             itemOverlay.src = ""; itemOverlay.style.opacity = "0";
-            video.style.filter = "none";
-            statusOrb.style.backgroundColor = "#f4e0a5";
-            cameraContainer.style.boxShadow = "0 0 30px rgba(244, 224, 165, 0.1), inset 0 0 20px rgba(244, 224, 165, 0.05)";
+            video.style.filter = "none"; blurSlider.value = "0.4"; brightSlider.value = "1.02";
         });
 
-        // Photo Assembly Canvas Logic
+        // High-Tier Master Picture Composing Assembly Engine
         captureBtn.addEventListener('click', () => {
-            document.body.style.backgroundColor = '#ffffff';
-            setTimeout(() => { document.body.style.background = 'radial-gradient(circle at center, #12122c 0%, #05050f 100%)'; }, 100);
+            if(isFourCutMode) { executeFourCutWorkflow(); } else { snapSinglePhoto(); }
+        });
 
-            const width = video.videoWidth;
-            const height = video.videoHeight;
-            renderCanvas.width = width;
-            renderCanvas.height = height;
-
+        // Routine A: 1-Pouch Standard Snap Mode
+        function snapSinglePhoto() {
+            playShutter(); document.body.style.backgroundColor = '#ffffff'; setTimeout(() => document.body.style.background = '', 100);
+            const w = video.videoWidth, h = video.videoHeight;
+            renderCanvas.width = w; renderCanvas.height = h;
             const ctx = renderCanvas.getContext('2d');
             
-            // Core Base Composition Image Filter Chain
-            let activeFilters = "contrast(1.05) saturate(1.1) brightness(1.02) blur(0.4px)"; // Skin Smoothing Soft Filter
-            const currentSelected = pokemonList.find(p => activeOverlay.src.includes(p.url));
-            if(currentSelected) {
-                activeFilters += " " + currentSelected.tint;
-            }
-            ctx.filter = activeFilters;
-
-            ctx.save();
-            if(currentFacingMode === "user") {
-                ctx.translate(width, 0);
-                ctx.scale(-1, 1);
-            }
-            ctx.drawImage(video, 0, 0, width, height);
-            ctx.restore();
-            ctx.filter = "none"; 
-
-            // Text Rendering Setup
-            ctx.font = "bold " + (width * 0.038) + "px system-ui, -apple-system, sans-serif";
-            ctx.fillStyle = "#f4e0a5";
-            ctx.textAlign = "center";
-            ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
-            ctx.shadowBlur = 10;
-            ctx.fillText("❤️ ARRA HEART MARK ❤️", width / 2, height * 0.08);
-            ctx.shadowBlur = 0;
-
-            // Load and draw layers safely using a unified promise sequence to prevent missing cuts
-            const drawLayers = [];
-
-            if (itemOverlay.src && itemOverlay.style.opacity !== "0") {
-                drawLayers.push(new Promise(res => {
-                    const img = new Image(); img.crossOrigin = "anonymous"; img.src = itemOverlay.src;
-                    img.onload = () => {
-                        const size = width * 0.22;
-                        ctx.drawImage(img, width * 0.05, height - size - (height * 0.05), size, size);
-                        res();
-                    };
-                }));
-            }
-
-            if (activeOverlay.src && activeOverlay.style.opacity !== "0") {
-                drawLayers.push(new Promise(res => {
-                    const img = new Image(); img.crossOrigin = "anonymous"; img.src = activeOverlay.src;
-                    img.onload = () => {
-                        const size = width * 0.35;
-                        const x = width - size - (width * 0.05);
-                        const y = height - size - (height * 0.05);
-                        ctx.drawImage(img, x, y, size, size);
-                        res();
-                    };
-                }));
-            }
-
-            Promise.all(drawLayers).then(() => {
-                const dataUrl = renderCanvas.toDataURL('image/jpeg', 0.95);
-                addSavedPhoto(dataUrl, true);
-                modalImage.src = dataUrl;
-                previewModal.classList.remove('hidden');
+            assembleFrameLayerOnCanvas(ctx, video, w, h, () => {
+                renderCanvas.toBlob(blob => {
+                    globalBlob = blob; modalImage.src = URL.createObjectURL(blob);
+                    saveToLocalMemoryAlbum(modalImage.src);
+                    previewModal.classList.remove('hidden');
+                }, 'image/jpeg', 0.95);
             });
-        });
+        }
 
-        function loadSavedGallery() {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEY);
-                if (!stored) return;
-                savedPhotos = JSON.parse(stored) || [];
-                savedPhotos.slice().reverse().forEach(photo => addSavedPhoto(photo, false));
-            } catch (err) {
-                console.warn('Could not load saved gallery', err);
-                savedPhotos = [];
+        // Routine B: 4-Cut Polaroid Sequential Cascade Run
+        async function executeFourCutWorkflow() {
+            countdownOverlay.classList.remove('hidden');
+            const posesBlobs = [];
+            const w = video.videoWidth, h = video.videoHeight;
+            
+            const snapCanvas = document.createElement('canvas');
+            snapCanvas.width = w; snapCanvas.height = h;
+            const sCtx = snapCanvas.getContext('2d');
+
+            for (let i = 0; i < 4; i++) {
+                let timer = 3; countdownOverlay.innerText = timer;
+                await new Promise(res => {
+                    const cd = setInterval(() => {
+                        timer--; playTone(600, 'sine', 0.04, 0.05);
+                        if(timer <= 0) { clearInterval(cd); res(); } else { countdownOverlay.innerText = timer; }
+                    }, 800);
+                });
+                
+                playShutter(); countdownOverlay.classList.add('hidden');
+                await new Promise(res => {
+                    assembleFrameLayerOnCanvas(sCtx, video, w, h, () => {
+                        posesBlobs.push(snapCanvas.toDataURL('image/jpeg', 0.9));
+                        countdownOverlay.classList.remove('hidden'); res();
+                    });
+                });
             }
-        }
+            countdownOverlay.classList.add('hidden');
 
-        function persistGallery() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(savedPhotos));
-            } catch (err) {
-                console.warn('Could not persist saved gallery', err);
+            renderCanvas.width = 600; renderCanvas.height = 1600;
+            const ctx = renderCanvas.getContext('2d');
+            ctx.fillStyle = "#09090b"; ctx.fillRect(0,0,600,1600);
+
+            let loaded = 0;
+            for(let i=0; i<4; i++) {
+                const img = new Image(); img.src = posesBlobs[i];
+                await new Promise(res => {
+                    img.onload = () => {
+                        ctx.drawImage(img, 40, 40 + (i * 350), 520, 330);
+                        res();
+                    }
+                });
             }
-        }
 
-        function updateGalleryCount() {
-            galleryCount.textContent = `${savedGallery.children.length} photos`;
-            clearGalleryBtn.disabled = savedGallery.children.length === 0;
-            clearGalleryBtn.classList.toggle('opacity-50', savedGallery.children.length === 0);
-        }
+            ctx.font = "bold 18px system-ui, sans-serif"; ctx.fillStyle = "#f4e0a5"; ctx.textAlign = "center";
+            ctx.fillText("❤️ ARRA HEART MARK ❤️", 300, 1510);
 
-        function addSavedPhoto(dataUrl, save = true) {
-            const photoButton = document.createElement('button');
-            photoButton.type = 'button';
-            photoButton.className = 'w-full aspect-square rounded-2xl overflow-hidden border border-white/10 bg-slate-950/70';
-            photoButton.innerHTML = `<img src="${dataUrl}" class="w-full h-full object-cover" alt="Saved snapshot">`;
-            photoButton.addEventListener('click', () => {
-                modalImage.src = dataUrl;
+            renderCanvas.toBlob(blob => {
+                globalBlob = blob; modalImage.src = URL.createObjectURL(blob);
+                saveToLocalMemoryAlbum(modalImage.src);
                 previewModal.classList.remove('hidden');
-            });
-
-            savedGallery.prepend(photoButton);
-            if (save) {
-                savedPhotos.unshift(dataUrl);
-                if (savedPhotos.length > MAX_SAVED_PHOTOS) savedPhotos.pop();
-                persistGallery();
-            }
-            updateGalleryCount();
-        }
-
-        function clearSavedGallery() {
-            savedPhotos = [];
-            savedGallery.innerHTML = '';
-            persistGallery();
-            updateGalleryCount();
-        }
-
-        // Force Blob download channel for rock-solid mobile device saving
-        downloadPhotoBtn.addEventListener('click', () => {
-            renderCanvas.toBlob((blob) => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `arra_snapshot_${Date.now()}.jpg`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
             }, 'image/jpeg', 0.95);
+        }
+
+        function assembleFrameLayerOnCanvas(ctx, srcVideo, width, height, callback) {
+            ctx.filter = `blur(${blurSlider.value}px) brightness(${brightSlider.value}) contrast(1.04) saturate(1.08)` + (selectedCharacter ? " " + selectedCharacter.tint : "");
+            ctx.save();
+            if(currentFacingMode === "user") { ctx.translate(width, 0); ctx.scale(-1, 1); }
+            ctx.drawImage(srcVideo, 0, 0, width, height); ctx.restore(); ctx.filter = "none";
+
+            if(!isFourCutMode) {
+                ctx.font = `bold ${width * 0.038}px system-ui, sans-serif`; ctx.fillStyle = "#f4e0a5"; ctx.textAlign = "center";
+                ctx.shadowColor = "rgba(0, 0, 0, 0.7)"; ctx.shadowBlur = 10;
+                ctx.fillText("❤️ ARRA HEART MARK ❤️", width / 2, height * 0.08); ctx.shadowBlur = 0;
+            }
+
+            const drawGroup = [];
+            if (itemOverlay.src && itemOverlay.style.opacity !== "0") {
+                drawGroup.push(new Promise(r => {
+                    const img = new Image(); img.crossOrigin = "anonymous"; img.src = itemOverlay.src;
+                    img.onload = () => { const s = width * 0.22; ctx.drawImage(img, width * 0.05, height - s - (height * 0.05), s, s); r(); };
+                }));
+            }
+            if (activeOverlay.src && activeOverlay.style.opacity !== "0") {
+                drawGroup.push(new Promise(r => {
+                    const img = new Image(); img.crossOrigin = "anonymous"; img.src = activeOverlay.src;
+                    img.onload = () => { const s = width * 0.35; ctx.drawImage(img, width - s - (width * 0.05), height - s - (height * 0.05), s, s); r(); };
+                }));
+            }
+            stampsArray.forEach(stamp => {
+                drawGroup.push(new Promise(r => {
+                    const img = new Image(); img.crossOrigin = "anonymous"; img.src = stamp.url;
+                    img.onload = () => { const s = 40; ctx.drawImage(img, (stamp.x * width) - s/2, (stamp.y * height) - s/2, s, s); r(); };
+                }));
+            });
+
+            if(drawGroup.length > 0) { Promise.all(drawGroup).then(callback); } else { callback(); }
+        }
+
+        function saveToLocalMemoryAlbum(url) {
+            const currentMem = JSON.parse(localStorage.getItem('arra_booth_memories') || '[]');
+            currentMem.unshift(url);
+            if(currentMem.length > 6) currentMem.pop();
+            localStorage.setItem('arra_booth_memories', JSON.stringify(currentMem));
+            albumBadge.classList.remove('hidden');
+        }
+
+        albumToggleBtn.addEventListener('click', () => {
+            albumDrawer.classList.remove('translate-y-full'); albumBadge.classList.add('hidden'); playBeep();
+            const memoryStorage = JSON.parse(localStorage.getItem('arra_booth_memories') || '[]');
+            if(memoryStorage.length === 0) {
+                albumGrid.innerHTML = `<p class="text-xs text-slate-500 text-center col-span-2 py-10">No snapshots cached yet.</p>`;
+                return;
+            }
+            albumGrid.innerHTML = "";
+            memoryStorage.forEach(srcUrl => {
+                const card = document.createElement('div');
+                card.className = "rounded-xl border border-white/10 overflow-hidden relative group bg-black aspect-[3/4]";
+                card.innerHTML = `<img src="${srcUrl}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer text-xs uppercase tracking-wider text-[#f4e0a5]">Save out</div>`;
+                card.addEventListener('click', () => {
+                    modalImage.src = srcUrl; previewModal.classList.remove('hidden'); albumDrawer.classList.add('translate-y-full');
+                });
+                albumGrid.appendChild(card);
+            });
         });
 
-        closeModalBtn.addEventListener('click', () => {
-            previewModal.classList.add('hidden');
-            modalImage.src = "";
+        closeAlbumBtn.addEventListener('click', () => albumDrawer.classList.add('translate-y-full'));
+        clearAlbumBtn.addEventListener('click', () => { localStorage.removeItem('arra_booth_memories'); albumGrid.innerHTML = ""; playBeep(); });
+
+        downloadPhotoBtn.addEventListener('click', async () => {
+            if (!globalBlob) return;
+            const file = new File([globalBlob], `arra_booth_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try { await navigator.share({ files: [file], title: 'My Pokémon Frame snapshot' }); } catch(err){}
+            } else {
+                const a = document.createElement('a'); a.href = modalImage.src; a.download = `arra_booth_${Date.now()}.jpg`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
         });
 
-        clearGalleryBtn.addEventListener('click', () => {
-            clearSavedGallery();
-        });
+        closeModalBtn.addEventListener('click', () => { previewModal.classList.add('hidden'); modalImage.src = ""; globalBlob = null; });
 
-        window.addEventListener('DOMContentLoaded', () => {
-            buildSelectors();
-            startCamera();
-            loadSavedGallery();
-        });
+        window.addEventListener('DOMContentLoaded', () => { initSelectors(); startCamera(); });
     </script>
 </body>
 </html>
